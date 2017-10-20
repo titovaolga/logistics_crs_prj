@@ -1,0 +1,55 @@
+﻿<Window x:Class="LogisticDB.BuyCarWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LogisticDB"
+        mc:Ignorable="d"
+        Title="BuyCar" Height="500" Width="700">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition MaxHeight="32"/>
+            <RowDefinition MaxHeight="32"/>
+            <RowDefinition MaxHeight="120"/>
+            <RowDefinition Height="Auto"/>
+
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <GroupBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Header="Models:" Margin="-3,4,11,4">
+            <ListView Name="ModelsListView">
+                <ListView.View>
+                    <GridView>
+                        <GridView.Columns>
+                            <GridViewColumn Header="Name" Width="80" DisplayMemberBinding="{Binding name}"/>
+                            <GridViewColumn Header="Cargo type" Width="80" DisplayMemberBinding="{Binding cargotype_name}"/>
+                            <GridViewColumn Header="Payload" Width="50" DisplayMemberBinding="{Binding payload}"/>
+                            <GridViewColumn Header="Buy cost" Width="65" DisplayMemberBinding="{Binding cost_buy}"/>
+                            <GridViewColumn Header="Sell cost" Width="65" DisplayMemberBinding="{Binding cost_sell}"/>
+                            <GridViewColumn Header="Cost empty" Width="65" DisplayMemberBinding="{Binding cost_empty_per_km}"/>
+                            <GridViewColumn Header="Cost full" Width="65" DisplayMemberBinding="{Binding cost_full_per_km}"/>
+                            <GridViewColumn Header="Cost stand" Width="65"  DisplayMemberBinding="{Binding cost_stand_per_day}"/>
+                        </GridView.Columns>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </GroupBox>
+        <Label Grid.Row="1" Grid.Column="0" Content="City:" VerticalAlignment="Center"/>
+        <ComboBox Grid.Row="1" Grid.Column="1" Name="CitiesComboBox" Margin="4" DisplayMemberPath="name" MinWidth="100"/>
+        <Label Grid.Row="2" Grid.Column="0" Content="Number:" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="2" Grid.Column="1" Name="NumberTextBox" Margin="4" MinWidth="100"/>
+        <Label Grid.Row="1" Grid.Column="2" Content="Date:" Margin="4"/>
+        <Calendar Name="DateCalender" Grid.Row="1" Grid.Column="3"  Grid.RowSpan="3"/>
+
+        <StackPanel Grid.Column="4" Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Name="OkButton" Click="OkButton_Click" Content="OK" Width="100" Height="30" Margin="8"/>
+            <Button Name="CancelButton" Click="CancelButton_Click" Content="Cancel" Width="100" Height="30" Margin="8"/>
+        </StackPanel>
+    </Grid>
+</Window>
