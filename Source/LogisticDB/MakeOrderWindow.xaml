@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LogisticDB"
         mc:Ignorable="d"
-        Title="MakeOrderWindow" Height="350" Width="600">
+        Title="MakeOrderWindow" Height="350" Width="900">
     <Grid Margin="0,0,0.333,-0.333">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -39,8 +39,9 @@
         <StackPanel Grid.Column="4" Grid.Row="5" Orientation="Horizontal" Grid.ColumnSpan="2" Margin="13.667,0.333,0.333,-0.333">
             <Button Name="OkButton" Click="OkButton_Click" Content="Make Order" Width="100" Height="30" Margin="8"/>
             <Button Name="CancelButton" Click="CancelButton_Click" Content="Cancel" Width="100" Height="30" Margin="8"/>
+            <Button Name="Ok2Button" Click="Ok2Button_Click" Content="Pay" Width="100" Height="30" Margin="8"/>
         </StackPanel>
-        <GroupBox Grid.Row="0" Grid.Column="4" Margin="3.667,4,0,10" Header="Сars:" Grid.RowSpan="3" HorizontalAlignment="Left" Width="217" Grid.ColumnSpan="2">
+        <GroupBox Grid.Row="0" Grid.Column="4" Margin="3.667,4,0,10" Header="Сars:" Grid.RowSpan="3" HorizontalAlignment="Left" Width="367" Grid.ColumnSpan="2">
             <ListView Name="CarsListView">
                 <ListView.View>
                     <GridView>
@@ -49,6 +50,7 @@
                             <GridViewColumn Header="Model" Width="80" DisplayMemberBinding="{Binding carmodel_name}"/>
                             <GridViewColumn Header="Cargo type" Width="80" DisplayMemberBinding="{Binding cargotype_name}"/>
                             <GridViewColumn Header="Payload" Width="50" DisplayMemberBinding="{Binding payload}"/>
+                            <GridViewColumn Header="Cost" Width="50" DisplayMemberBinding="{Binding cost}"/>
                         </GridView.Columns>
                     </GridView>
                 </ListView.View>

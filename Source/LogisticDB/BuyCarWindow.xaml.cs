@@ -35,25 +35,30 @@ namespace LogisticDB
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
-            double cost = 0;
             if (CitiesComboBox.SelectedItem == null)
             {
-                MessageBox.Show("Select city!", "", MessageBoxButton.OK, MessageBoxImage.Error); //change
+                MessageBox.Show("Select city!", "", MessageBoxButton.OK, MessageBoxImage.Error); 
                 return;
             }
             if (ModelsListView.SelectedItem == null)
             {
-                MessageBox.Show("Select model!", "", MessageBoxButton.OK, MessageBoxImage.Error); //change
+                MessageBox.Show("Select model!", "", MessageBoxButton.OK, MessageBoxImage.Error); 
                 return;
             }
             if(string.IsNullOrWhiteSpace(NumberTextBox.Text)) 
             {
-                MessageBox.Show("Input number!", "", MessageBoxButton.OK, MessageBoxImage.Error); //change
+                MessageBox.Show("Input number!", "", MessageBoxButton.OK, MessageBoxImage.Error); 
                 return;
             }
-                db.BuyCar((CitiesComboBox.SelectedItem as City).id, 
+            if ((DateTime)DateCalender.SelectedDate == null)
+            {
+                MessageBox.Show("Select date!", "", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            db.BuyCar((CitiesComboBox.SelectedItem as City).id, 
                     (ModelsListView.SelectedItem as CarModelCargoType).id, 
-                    DateCalender.DisplayDate, NumberTextBox.Text);
+                    (DateTime)DateCalender.SelectedDate, NumberTextBox.Text);
             Close();
         }
 

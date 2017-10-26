@@ -31,12 +31,17 @@ namespace LogisticDB
         private void BuyCarButton_Click(object sender, RoutedEventArgs e)
         {
             BuyCarWindow.ShowBuyDialog(db);
-            CarsListView.ItemsSource = db.GetCarViews();
+       //     CarsListView.ItemsSource = db.GetCarViews();
         }
 
         private void MakeOrderButton_Click(object sender, RoutedEventArgs e)
         {
             MakeOrderWindow.ShowMakeOrderDialog(db);
+        }
+
+        private void SellCarButton_Click(object sender, RoutedEventArgs e)
+        {
+            SellCarWindow.ShowSellCarDialog(db);
         }
     }
 }

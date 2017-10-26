@@ -72,15 +72,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="SellCarWindow.xaml.cs">
+      <DependentUpon>SellCarWindow.xaml</DependentUpon>
+    </Compile>
     <Page Include="BuyCarWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="ChooseCarWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="FooWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -95,18 +90,16 @@
     <Compile Include="BuyCarWindow.xaml.cs">
       <DependentUpon>BuyCarWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ChooseCarWindow.xaml.cs">
-      <DependentUpon>ChooseCarWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="FooWindow.xaml.cs">
-      <DependentUpon>FooWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="LogisticData.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Page Include="MakeOrderWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="SellCarWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -83,6 +83,11 @@ namespace LogisticDB
         public DateTime? date_to { get; set; }
     }
 
+    public class CarViewCost : CarView
+    {
+        public double cost { get; set; }
+    }
+
     public class LogisticData
     {
         string ConnectStr { get { return "Server=127.0.01;Port=5439;User=postgres;Password=postgres;Database=logistic;CommandTimeout=60"; } }
@@ -128,18 +133,35 @@ namespace LogisticDB
                     new {  carModel_id = carModel_id, number = number, city_id = city_id, date = date});
             }
         }
-        
-        
-        public IEnumerable<CarView> FindCarForTransaction(City city_from, City city_to, DateTime date, CargoType cargoType, float weight)
+
+        public void SellCar(CarView car, DateTime date)
         {
             using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
             {
-               var res  =  conn.Query<CarView>(@"SELECT * FROM cars_view AS cv INNER JOIN find_cars_for_transaction(@cargotype_id, @weight, @city_id_from , @city_id_to, ((@date)::date)) as f ON f.car_id = cv.id",
-                     new { cargotype_id = cargoType.id, weight = weight, city_id_from = city_from.id, city_id_to = city_to.id, date = date}).ToList();
-                return res; 
+                conn.Execute(@"SELECT * FROM  sell_car(@car_id, ((@date)::date))",
+                    new { car_id = car.id, date = date });
             }
         }
 
-   
-  }
+        public IEnumerable<CarViewCost> FindCarForTransaction(City city_from, City city_to, DateTime date, CargoType cargoType, float weight)
+        {
+            using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
+            {
+                var res = conn.Query<CarViewCost>(@"SELECT * FROM cars_view AS cv INNER JOIN find_cars_for_transaction(@cargotype_id, @weight, @city_id_from , @city_id_to, ((@date)::date)) as f ON f.car_id = cv.id",
+                    new { cargotype_id = cargoType.id, weight = weight, city_id_from = city_from.id, city_id_to = city_to.id, date = date }).ToList();
+             
+                return res;
+            }
+        }
+
+        public void MakeTransaction(CarViewCost car, City city_from, City city_to, DateTime date)
+        {
+            using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
+            {
+                conn.Execute(@"SELECT * FROM  make_transaction(@_car_id, @_city_id_from, @_city_id_to, ((@date)::date))",
+                    new { _car_id = car.id, _city_id_from = city_from.id, _city_id_to = city_to.id, date = date });
+            }
+        }
+
+    }
 }
