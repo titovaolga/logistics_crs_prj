@@ -50,7 +50,7 @@
                             <GridViewColumn Header="Model" Width="80" DisplayMemberBinding="{Binding carmodel_name}"/>
                             <GridViewColumn Header="Cargo type" Width="80" DisplayMemberBinding="{Binding cargotype_name}"/>
                             <GridViewColumn Header="Payload" Width="50" DisplayMemberBinding="{Binding payload}"/>
-                            <GridViewColumn Header="Cost" Width="50" DisplayMemberBinding="{Binding cost}"/>
+                            <GridViewColumn Header="Expense" Width="50" DisplayMemberBinding="{Binding expense}"/>
                         </GridView.Columns>
                     </GridView>
                 </ListView.View>

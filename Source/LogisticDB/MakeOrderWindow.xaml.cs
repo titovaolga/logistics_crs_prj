@@ -85,7 +85,7 @@ namespace LogisticDB
                 return;
             }
 
-            db.MakeTransaction(CarsListView.SelectedItem as CarViewCost, 
+            db.MakeTransaction(CarsListView.SelectedItem as CarViewExpense, 
                 CitiesFromComboBox.SelectedItem as City,
                 CitiesToComboBox.SelectedItem as City,
                 (DateTime)DateCalender.SelectedDate);

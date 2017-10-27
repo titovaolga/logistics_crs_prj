@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using Npgsql;
 
 namespace LogisticDB
 {
@@ -46,8 +47,16 @@ namespace LogisticDB
                 return;
             }
 
-            db.SellCar(CarsListView.SelectedItem as CarView,
-                   (DateTime)DateCalender.SelectedDate);
+            try
+            {
+                db.SellCar(CarsListView.SelectedItem as CarView,
+                       (DateTime)DateCalender.SelectedDate);
+            }
+            catch (NpgsqlException ex)
+            {
+                MessageBox.Show(string.Format("{0}\r\nHINT: {1}", ex.Message, ex.Hint), "", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
             Close();
         }
 

@@ -20,11 +20,11 @@
                             <GridViewColumn Header="Model" Width="80" DisplayMemberBinding="{Binding carmodel_name}"/>
                             <GridViewColumn Header="Cargo type" Width="80" DisplayMemberBinding="{Binding cargotype_name}"/>
                             <GridViewColumn Header="Payload" Width="50" DisplayMemberBinding="{Binding payload}"/>
-                            <GridViewColumn Header="Buy cost" Width="65" DisplayMemberBinding="{Binding cost_buy}"/>
-                            <GridViewColumn Header="Sell cost" Width="65" DisplayMemberBinding="{Binding cost_sell}"/>
-                            <GridViewColumn Header="Cost empty" Width="65" DisplayMemberBinding="{Binding cost_empty_per_km}"/>
-                            <GridViewColumn Header="Cost full" Width="65" DisplayMemberBinding="{Binding cost_full_per_km}"/>
-                            <GridViewColumn Header="Cost stand" Width="65"  DisplayMemberBinding="{Binding cost_stand_per_day}"/>
+                            <GridViewColumn Header="Buy price" Width="65" DisplayMemberBinding="{Binding price_buy}"/>
+                            <GridViewColumn Header="Sell price" Width="65" DisplayMemberBinding="{Binding price_sell}"/>
+                            <GridViewColumn Header="Price empty" Width="65" DisplayMemberBinding="{Binding price_empty_per_km}"/>
+                            <GridViewColumn Header="Price full" Width="65" DisplayMemberBinding="{Binding price_full_per_km}"/>
+                            <GridViewColumn Header="price stand" Width="65"  DisplayMemberBinding="{Binding price_stand_per_day}"/>
                             <GridViewColumn Header="Buy date" Width="90"  DisplayMemberBinding="{Binding date_buy, StringFormat='yyyy.MM.dd'}"/>
                             <GridViewColumn Header="Sell date" Width="90"  DisplayMemberBinding="{Binding date_sell, StringFormat='yyyy.MM.dd'}"/>
                         </GridView.Columns>

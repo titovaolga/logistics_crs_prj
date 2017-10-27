@@ -28,7 +28,7 @@
                             <GridViewColumn Header="Model" Width="80" DisplayMemberBinding="{Binding carmodel_name}"/>
                             <GridViewColumn Header="Cargo type" Width="80" DisplayMemberBinding="{Binding cargotype_name}"/>
                             <GridViewColumn Header="Payload" Width="50" DisplayMemberBinding="{Binding payload}"/>
-                            <GridViewColumn Header="Sell cost" Width="65" DisplayMemberBinding="{Binding cost_sell}"/>
+                            <GridViewColumn Header="Sell price" Width="65" DisplayMemberBinding="{Binding price_sell}"/>
                         </GridView.Columns>
                     </GridView>
                 </ListView.View>

@@ -45,11 +45,11 @@ namespace LogisticDB
         public string name { get; set; }
         public int cargotype_id { get; set; }
         public float payload { get; set; }
-        public double cost_buy { get; set; }
-        public double cost_sell { get; set; }
-        public double cost_empty_per_km { get; set; }
-        public double cost_full_per_km { get; set; }
-        public double cost_stand_per_day { get; set; }
+        public double price_buy { get; set; }
+        public double price_sell { get; set; }
+        public double price_empty_per_km { get; set; }
+        public double price_full_per_km { get; set; }
+        public double price_stand_per_day { get; set; }
     }
     
     public class CarView : Car
@@ -58,11 +58,11 @@ namespace LogisticDB
         public string cargotype_name { get; set; }
         public int cargotype_id { get; set; }
         public float payload { get; set; }
-        public double cost_buy { get; set; }
-        public double cost_sell { get; set; }
-        public double cost_empty_per_km { get; set; }
-        public double cost_full_per_km { get; set; }
-        public double cost_stand_per_day { get; set; }
+        public double price_buy { get; set; }
+        public double price_sell { get; set; }
+        public double price_empty_per_km { get; set; }
+        public double price_full_per_km { get; set; }
+        public double price_stand_per_day { get; set; }
         public DateTime date_buy { get; set; }
         public DateTime? date_sell { get; set; }
     }
@@ -83,9 +83,9 @@ namespace LogisticDB
         public DateTime? date_to { get; set; }
     }
 
-    public class CarViewCost : CarView
+    public class CarViewExpense : CarView
     {
-        public double cost { get; set; }
+        public double expence { get; set; }
     }
 
     public class LogisticData
@@ -143,18 +143,17 @@ namespace LogisticDB
             }
         }
 
-        public IEnumerable<CarViewCost> FindCarForTransaction(City city_from, City city_to, DateTime date, CargoType cargoType, float weight)
+        public IEnumerable<CarViewExpense> FindCarForTransaction(City city_from, City city_to, DateTime date, CargoType cargoType, float weight)
         {
             using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
             {
-                var res = conn.Query<CarViewCost>(@"SELECT * FROM cars_view AS cv INNER JOIN find_cars_for_transaction(@cargotype_id, @weight, @city_id_from , @city_id_to, ((@date)::date)) as f ON f.car_id = cv.id",
+                var res = conn.Query<CarViewExpense>(@"SELECT * FROM cars_view AS cv INNER JOIN find_cars_for_transaction(@cargotype_id, @weight, @city_id_from , @city_id_to, ((@date)::date)) as f ON f.car_id = cv.id",
                     new { cargotype_id = cargoType.id, weight = weight, city_id_from = city_from.id, city_id_to = city_to.id, date = date }).ToList();
-             
                 return res;
             }
         }
 
-        public void MakeTransaction(CarViewCost car, City city_from, City city_to, DateTime date)
+        public void MakeTransaction(CarViewExpense car, City city_from, City city_to, DateTime date)
         {
             using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
             {
