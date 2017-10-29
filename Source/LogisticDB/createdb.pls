@@ -42,19 +42,6 @@ CREATE TABLE IF NOT EXISTS cargotypes
 	price_per_km_ton double precision NOT NULL CHECK (price_per_km_ton > 0) 
 );
 
-
-/*
-CREATE TABLE IF NOT EXISTS cartypes
-(
-  id serial PRIMARY KEY,
-  cargo_type text NOT NULL,
-  price_empty double precision NOT NULL CHECK (price_empty > 0),
-  price_full double precision NOT NULL CHECK (price_full > 0),
-  price_stand double precision NOT NULL,
-  payload real NOT NULL CHECK (payload > 0)
-);
-*/
-
 CREATE TABLE IF NOT EXISTS carmodels
 (
 	id serial NOT NULL PRIMARY KEY,
@@ -102,7 +89,7 @@ CREATE TABLE IF NOT EXISTS transactions
 (
   id serial NOT NULL PRIMARY KEY,
   car_id integer NOT NULL,
-  is_full boolean DEFAULT FALSE,
+  weight real DEFAULT 0 NOT NULL CHECK (weight >= 0),
   city_from integer NOT NULL,
   city_to integer NOT NULL CHECK (city_to != city_from),
   date_from date NOT NULL,
@@ -294,13 +281,13 @@ $$ LANGUAGE plpgsql;
 
  
 CREATE OR REPLACE FUNCTION find_cars_for_transaction(IN _cargotype_id integer, IN _weight real, IN _city_id_from integer, IN _city_id_to integer, IN _date date)
-RETURNS TABLE (car_id integer, price real) 
+RETURNS TABLE (car_id integer, expense real) 
 AS $$
 BEGIN
     RETURN QUERY
     WITH tmp AS (SELECT cv.id, get_car_city_before(cv.id, _date) as city_before, get_car_city_after(cv.id, _date) as city_after
     FROM cars_view AS cv
-    WHERE cv.cargotype_id = _cargotype_id AND cv.payload >= _weight AND (cv.date_sell IS NULL OR cv.date_sell <= _date)
+    WHERE cv.cargotype_id = _cargotype_id AND cv.payload >= _weight AND (cv.date_sell IS NULL OR cv.date_sell >= _date)
         AND 
         NOT EXISTS (SELECT 1 FROM transactions AS t WHERE t.car_id = cv.id AND t.date_from <= _date AND _date < t.date_to)
     ) 
@@ -317,91 +304,41 @@ CREATE OR REPLACE FUNCTION transaction_expense(IN _car_id integer, IN _weight re
 RETURNS real
 AS $$
 DECLARE
-   r_dist record;
-   r_price record;
-   price1 real = 0;
-   price2 real = 0;
-   price3 real = 0;
-BEGIN
-	SELECT price_empty_per_km, price_full_per_km INTO r_price FROM cars AS c 
-    INNER JOIN carmodels AS cm ON c.carmodel_id = cm.id 
-	WHERE c.id = _car_id;	
-
-	IF (get_car_city_before(_car_id, _date)).city_id != _city_id_from
-	THEN
-        SELECT distance INTO r_dist FROM 
-            ((SELECT city_from, city_to, distance FROM roads WHERE city_from = (get_car_city_before(_car_id, _date)).city_id AND city_to = _city_id_from)
-        UNION ALL 
-            (SELECT city_to AS city_from, city_from AS city_to, distance FROM roads WHERE city_to = (get_car_city_before(_car_id, _date)).city_id AND city_from = _city_id_from)) as d;
-	    price1 := r_price.price_empty_per_km * r_dist.distance;
-	END IF;
-
-	SELECT distance INTO r_dist FROM 
-        ((SELECT city_from, city_to, distance FROM roads WHERE city_from = _city_id_from AND city_to = _city_id_to)
-    UNION ALL 
-        (SELECT city_to AS city_from, city_from AS city_to, distance FROM roads WHERE city_to = _city_id_from AND city_from = _city_id_to)) as d;
-	price2 := r_price.price_full_per_km * r_dist.distance * _weight;
-
-	IF _city_id_to != (get_car_city_after(_car_id, _date)).city_id
-	THEN
-        SELECT distance INTO r_dist FROM 
-            ((SELECT city_from, city_to, distance FROM roads WHERE city_from = (get_car_city_after(_car_id, _date)).city_id AND city_to = _city_id_to)
-        UNION ALL 
-            (SELECT city_to AS city_from, city_from AS city_to, distance FROM roads WHERE city_to = (get_car_city_after(_car_id, _date)).city_id AND city_from = _city_id_to)) as d;
-
-	    price3 := r_price.price_empty_per_km * r_dist.distance;
-	END IF;
-
-	RETURN price1 + price2 + price3;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION transaction_expense_2(IN _car_id integer, IN _weight real, IN _city_id_from integer, IN _city_id_to integer, IN _date date)
-RETURNS real
-AS $$
-DECLARE
     r_price record;
 BEGIN
     SELECT price_empty_per_km, price_full_per_km INTO r_price FROM cars_view WHERE id = _car_id;	
-    RETURN (get_distance(_city_id_from, _city_id_to) * r_price.price_full_per_km + 
-           (get_distance(get_car_city_before(_car_id, _date), _city_id_from) + 
-            get_distance(_city_id_to, COALESCE(get_car_city_after(_car_id, _date), _city_id_to))) * r_price.price_full_per_km);
+    RETURN (get_distance(_city_id_from, _city_id_to) * r_price.price_full_per_km * _weight + 
+           (get_distance((get_car_city_before(_car_id, _date)).city_id, _city_id_from) + 
+           get_distance(_city_id_to, COALESCE((get_car_city_after(_car_id, _date)).city_id, _city_id_to))) * r_price.price_empty_per_km);
 END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION make_transaction(IN _car_id integer, IN _city_id_from integer, IN _city_id_to integer, IN _date date)
+CREATE OR REPLACE FUNCTION make_transaction(IN _car_id integer, IN _weight real, IN _city_id_from integer, IN _city_id_to integer, IN _date date)
     RETURNS VOID
 AS $$
 BEGIN
-
 	IF (get_car_city_before(_car_id, _date)).city_id != _city_id_from
 	THEN
-		INSERT INTO transactions(car_id, city_from, city_to, date_from, date_to) VALUES (_car_id, (get_car_city_before(_car_id, _date)).city_id, _city_id_from,
-		_date, 
-		_date + get_distance_in_days((get_car_city_before(_car_id, _date)).city_id, _city_id_from));
-		INSERT INTO transactions(car_id, is_full, city_from, city_to, date_from, date_to) VALUES (_car_id, TRUE, _city_id_from, _city_id_to, 
-		_date + get_distance_in_days((get_car_city_before(_car_id, _date)).city_id, _city_id_from), 
-		_date + get_distance_in_days((get_car_city_before(_car_id, _date)).city_id, _city_id_from) + get_distance_in_days(_city_id_from, _city_id_to));
-	
-		IF _city_id_to != (get_car_city_after(_car_id, _date)).city_id
-		THEN
-			INSERT INTO transactions(car_id, city_from, city_to, date_from, date_to) VALUES (_car_id, _city_id_to, (get_car_city_after(_car_id, _date)).city_id, 
-			_date + get_distance_in_days((get_car_city_before(_car_id, _date)).city_id, _city_id_from) + get_distance_in_days(_city_id_from, _city_id_to),
-			_date + get_distance_in_days((get_car_city_before(_car_id, _date)).city_id, _city_id_from) + get_distance_in_days(_city_id_from, _city_id_to) + get_distance_in_days(_city_id_to, (get_car_city_after(_car_id, _date)).city_id));
-		END IF;
-	ELSE
-		INSERT INTO transactions(car_id, is_full, city_from, city_to, date_from, date_to) VALUES (_car_id, TRUE, _city_id_from, _city_id_to, 
+		INSERT INTO transactions(car_id, city_from, city_to, date_from, date_to) 
+		VALUES (_car_id, (get_car_city_before(_car_id, _date)).city_id, _city_id_from,
+		_date - get_distance_in_days((get_car_city_before(_car_id, _date)).city_id, _city_id_from), 
+		_date);
+	END IF;
+
+	INSERT INTO transactions(car_id, weight, city_from, city_to, date_from, date_to) 
+	VALUES (_car_id, _weight, _city_id_from, _city_id_to, 
 		_date, 
 		_date + get_distance_in_days(_city_id_from, _city_id_to));
-			
-		IF _city_id_to != (get_car_city_after(_car_id, _date)).city_id  
-		THEN
-			INSERT INTO transactions(car_id, city_from, city_to, date_from, date_to) VALUES (_car_id, _city_id_to, (get_car_city_after(_car_id, _date)).city_id, 
-			_date + get_distance_in_days(_city_id_from, _city_id_to),
-			_date + get_distance_in_days(_city_id_from, _city_id_to) + get_distance_in_days(_city_id_to, (get_car_city_after(_car_id, _date)).city_id));
-		END IF;
+	
+	IF (get_car_city_after(_car_id, _date)).city_id != NULL AND _city_id_to != (get_car_city_after(_car_id, _date)).city_id
+	THEN
+		INSERT INTO transactions(car_id, city_from, city_to, date_from, date_to) 
+		VALUES (_car_id, _city_id_to, (get_car_city_after(_car_id, _date)).city_id, 
+		_date + get_distance_in_days(_city_id_from, _city_id_to),
+		_date + get_distance_in_days(_city_id_from, _city_id_to) + get_distance_in_days(_city_id_to, (get_car_city_after(_car_id, _date)).city_id));
 	END IF;
+	
 END
 $$ LANGUAGE plpgsql;
 
@@ -423,6 +360,25 @@ BEGIN
 		GROUP BY car_id;
 
    SELECT car_id, 1 - days_in_way / 365.0 as coef FROM in_way ORDER BY car_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION coef_stay_for_car(IN _date_1 date, IN _date_2 date) 
+RETURNS TABLE (car_id integer, coef real) 
+AS $$
+BEGIN
+	DROP TABLE IF EXISTS tmp;
+	CREATE TEMP TABLE tmp AS
+	SELECT t.car_id, LEAST(date_to, _date_2) - GREATEST(date_from, _date_1) as days
+	FROM transactions AS t
+	WHERE ( _date_1 < date_to AND  _date_2 > date_from);
+
+	DROP TABLE IF EXISTS in_way;
+	CREATE TEMP TABLE in_way AS
+		SELECT tmp.car_id, sum(days) as days_in_way FROM tmp
+		GROUP BY tmp.car_id;
+		
+	SELECT in_way.car_id, ( _date_2 - _date_1 - days_in_way) * 1.0 / days_in_way as coef FROM in_way ORDER BY in_way.car_id;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -457,20 +413,20 @@ BEGIN
         ((SELECT city_from, city_to, distance FROM roads WHERE city_from = t.city_from AND city_to = t.city_to)
 		UNION ALL 
         (SELECT city_to AS city_from, city_from AS city_to, distance FROM roads WHERE city_to = t.city_from AND city_from = t.city_to)) as d) as dist,
-		is_full
+		weight
 		FROM transactions as t
 		WHERE date_part('year', date_from) = date_part('year', CURRENT_DATE);
 
 	DROP TABLE IF EXISTS way_full;
 	CREATE TEMP TABLE way_full AS
 		SELECT car_id, sum(dist) as dist_full FROM tmp
-		WHERE is_full = TRUE
+		WHERE weight > 0
 		GROUP BY car_id;
 
 	DROP TABLE IF EXISTS way_empty;
 	CREATE TEMP TABLE way_empty AS
 		SELECT car_id, sum(dist) as dist_empty FROM tmp
-		WHERE is_full = FALSE
+		WHERE weight = 0
 		GROUP BY car_id;
 		
 	SELECT *, dist_empty * 1.0 / dist_full as coef FROM way_empty INNER JOIN way_full ON way_empty.car_id = way_full.car_id;
@@ -489,20 +445,20 @@ BEGIN
         ((SELECT city_from, city_to, distance FROM roads WHERE city_from = t.city_from AND city_to = t.city_to)
 		UNION ALL 
         (SELECT city_to AS city_from, city_from AS city_to, distance FROM roads WHERE city_to = t.city_from AND city_from = t.city_to)) as d) as dist,
-		is_full
+		weight
 		FROM transactions as t
 		WHERE date_part('year', date_from) = date_part('year', CURRENT_DATE);
 
 	DROP TABLE IF EXISTS way_full;
 	CREATE TEMP TABLE way_full AS
 		SELECT car_id, sum(dist) as dist_full FROM tmp
-		WHERE is_full = TRUE
+		WHERE weight > 0
 		GROUP BY car_id;
 
 	DROP TABLE IF EXISTS way_empty;
 	CREATE TEMP TABLE way_empty AS
 		SELECT car_id, sum(dist) as dist_empty FROM tmp
-		WHERE is_full = FALSE
+		WHERE weight = 0
 		GROUP BY car_id;
 		
 	SELECT sum(dist_empty) * 1.0 / sum(dist_full) as coef FROM way_empty INNER JOIN way_full ON way_empty.car_id = way_full.car_id;
@@ -560,3 +516,49 @@ INSERT INTO carmodels
 ('Scania', get_cargotype_id('gas'), 30, 8.5e6, 5.5e6, 27, 33, 700),
 ('Gazel' , get_cargotype_id('boxes'), 1.5, 9e5, 5e5, 20, 35, 300)
 ON CONFLICT DO NOTHING;
+
+
+
+CREATE OR REPLACE FUNCTION transaction_expense2(IN _car_id integer, IN _weight real, IN _city_id_from integer, IN _city_id_to integer, IN _date date)
+RETURNS real
+AS $$
+DECLARE
+   r_dist record;
+   r_price record;
+   price1 real = 0;
+   price2 real = 0;
+   price3 real = 0;
+BEGIN
+	SELECT price_empty_per_km, price_full_per_km INTO r_price FROM cars AS c 
+    INNER JOIN carmodels AS cm ON c.carmodel_id = cm.id 
+	WHERE c.id = _car_id;	
+
+	IF (get_car_city_before(_car_id, _date)).city_id != _city_id_from
+	THEN
+        SELECT distance INTO r_dist FROM 
+            ((SELECT city_from, city_to, distance FROM roads WHERE city_from = (get_car_city_before(_car_id, _date)).city_id AND city_to = _city_id_from)
+        UNION ALL 
+            (SELECT city_to AS city_from, city_from AS city_to, distance FROM roads WHERE city_to = (get_car_city_before(_car_id, _date)).city_id AND city_from = _city_id_from)) as d;
+	    price1 := r_price.price_empty_per_km * r_dist.distance;
+	END IF;
+
+	SELECT distance INTO r_dist FROM 
+        ((SELECT city_from, city_to, distance FROM roads WHERE city_from = _city_id_from AND city_to = _city_id_to)
+    UNION ALL 
+        (SELECT city_to AS city_from, city_from AS city_to, distance FROM roads WHERE city_to = _city_id_from AND city_from = _city_id_to)) as d;
+	price2 := r_price.price_full_per_km * r_dist.distance * _weight;
+
+	IF _city_id_to != (get_car_city_after(_car_id, _date)).city_id
+	THEN
+        SELECT distance INTO r_dist FROM 
+            ((SELECT city_from, city_to, distance FROM roads WHERE city_from = (get_car_city_after(_car_id, _date)).city_id AND city_to = _city_id_to)
+        UNION ALL 
+            (SELECT city_to AS city_from, city_from AS city_to, distance FROM roads WHERE city_to = (get_car_city_after(_car_id, _date)).city_id AND city_from = _city_id_to)) as d;
+
+	    price3 := r_price.price_empty_per_km * r_dist.distance;
+	END IF;
+
+	RETURN price1 + price2 + price3;
+END;
+$$ LANGUAGE plpgsql;
+

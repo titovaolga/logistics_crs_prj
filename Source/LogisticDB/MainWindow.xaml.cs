@@ -45,6 +45,11 @@ namespace LogisticDB
             CarsListView.ItemsSource = db.GetCarViews();
 
         }
+
+        private void ReportsButton_Click(object sender, RoutedEventArgs e)
+        {
+            ReportsWindow.
+        }
     }
 }
 

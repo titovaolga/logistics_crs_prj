@@ -48,7 +48,7 @@ namespace LogisticDB
                 MessageBox.Show("Select city to!", "", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            if (CitiesFromComboBox.SelectedItem == CitiesToComboBox.SelectedItem) // не работает почему-то :(
+            if (((City)CitiesFromComboBox.SelectedItem).id == ((City)CitiesToComboBox.SelectedItem).id)
             {
                 MessageBox.Show("Choose another city to!", "", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
@@ -79,6 +79,8 @@ namespace LogisticDB
 
         private void Ok2Button_Click(object sender, RoutedEventArgs e)
         {
+            float weight = 0;
+            float.TryParse(PayloadTextBox.Text, out weight);
             if (CarsListView.SelectedItem == null)
             {
                 MessageBox.Show("Select variant for transaction!", "", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -88,7 +90,8 @@ namespace LogisticDB
             db.MakeTransaction(CarsListView.SelectedItem as CarViewExpense, 
                 CitiesFromComboBox.SelectedItem as City,
                 CitiesToComboBox.SelectedItem as City,
-                (DateTime)DateCalender.SelectedDate);
+                (DateTime)DateCalender.SelectedDate,
+                weight);
 
             Close();
         }

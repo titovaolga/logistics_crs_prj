@@ -41,10 +41,12 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Button Name="BuyCarButton" Click="BuyCarButton_Click" Grid.Row="0" Grid.Column="0"  Background='White' Margin='8' Width="100" Height="35" Content="Buy car"/>
             <Button Name="SellCarButton" Click="SellCarButton_Click" Grid.Row="0" Grid.Column="1"  Background='White' Margin='8' Width="100" Height="35" Content="Sell car"/>
             <Button Name="MakeOrderButton" Click="MakeOrderButton_Click" Grid.Row="0" Grid.Column="2"  Background='White' Margin='8' Width="100" Height="35" Content="Make order"/>
+            <Button Name="ReportsButton" Click="ReportsButton_Click" Grid.Row="0" Grid.Column="3"  Background='White' Margin='8' Width="100" Height="35" Content="Reports"/>
         </Grid>
     </Grid>
 </Window>

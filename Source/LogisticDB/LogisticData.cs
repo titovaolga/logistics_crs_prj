@@ -76,7 +76,7 @@ namespace LogisticDB
     {
         public int id { get; set; }
         public int car_id { get; set; }
-        public bool is_full { get; set; }
+        public float weight { get; set; }
         public int city_from { get; set; }
         public int city_to { get; set; }
         public DateTime date_from { get; set; }
@@ -85,7 +85,7 @@ namespace LogisticDB
 
     public class CarViewExpense : CarView
     {
-        public double expence { get; set; }
+        public double expense { get; set; }
     }
 
     public class LogisticData
@@ -153,12 +153,12 @@ namespace LogisticDB
             }
         }
 
-        public void MakeTransaction(CarViewExpense car, City city_from, City city_to, DateTime date)
+        public void MakeTransaction(CarViewExpense car, City city_from, City city_to, DateTime date, float weight)
         {
             using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
             {
-                conn.Execute(@"SELECT * FROM  make_transaction(@_car_id, @_city_id_from, @_city_id_to, ((@date)::date))",
-                    new { _car_id = car.id, _city_id_from = city_from.id, _city_id_to = city_to.id, date = date });
+                conn.Execute(@"SELECT * FROM  make_transaction(@_car_id, @weight, @_city_id_from, @_city_id_to, ((@date)::date))",
+                    new { _car_id = car.id, weight = weight, _city_id_from = city_from.id, _city_id_to = city_to.id, date = date });
             }
         }
 
