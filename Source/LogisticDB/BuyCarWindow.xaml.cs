@@ -35,6 +35,7 @@ namespace LogisticDB
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
+            char[] name;
             if (CitiesComboBox.SelectedItem == null)
             {
                 MessageBox.Show("Select city!", "", MessageBoxButton.OK, MessageBoxImage.Error); 
@@ -48,6 +49,13 @@ namespace LogisticDB
             if(string.IsNullOrWhiteSpace(NumberTextBox.Text)) 
             {
                 MessageBox.Show("Input number!", "", MessageBoxButton.OK, MessageBoxImage.Error); 
+                return;
+            }
+            name = NumberTextBox.Text.ToCharArray(0, NumberTextBox.Text.Length);
+            if (NumberTextBox.Text.Length != 6 || !char.IsLetter(name[0]) || !char.IsLetter(name[4]) || !char.IsLetter(name[5])
+                || !char.IsDigit(name[1]) || !char.IsDigit(name[2]) || !char.IsDigit(name[3]))
+            {
+                MessageBox.Show("Input number as: a000aa, where a - any letter, 0 - any number!", "", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
             if ((DateTime)DateCalender.SelectedDate == null)

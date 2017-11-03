@@ -48,7 +48,7 @@ namespace LogisticDB
 
         private void ReportsButton_Click(object sender, RoutedEventArgs e)
         {
-            ReportsWindow.
+            ReportsWindow.ShowReportsDialog(db);
         }
     }
 }
