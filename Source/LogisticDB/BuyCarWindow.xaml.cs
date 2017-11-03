@@ -58,7 +58,7 @@ namespace LogisticDB
                 MessageBox.Show("Input number as: a000aa, where a - any letter, 0 - any number!", "", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            if ((DateTime)DateCalender.SelectedDate == null)
+            if (DateCalender.SelectedDate == null)
             {
                 MessageBox.Show("Select date!", "", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;

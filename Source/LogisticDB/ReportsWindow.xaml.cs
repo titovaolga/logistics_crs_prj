@@ -87,25 +87,12 @@ namespace LogisticDB
             var coll = new List<Time>();
 
             int n, start, i;
-            for (i = 0, n = 1000, start = 0; n <= 100000; start = n, n *= 10, i++)
+            for (i = 0, n = 1000, start = 0; n <= 10000; start = n, n *= 10, i++)
             {
-                db.MakeTable(start, n);
                 var time = new Time();
+                // name = "testTime" + i;
 
-                time.RowsInTable = n;
-                time.AddOne = db.GetTimeAddOne();
-                time.AddGroup = db.GetTimeAddGroup();
-                time.AddGroup2 = db.GetTimeAddGroup2();
-                time.FindByKey = db.GetTimeFindByKey(n);
-                time.FindByString = db.GetTimeFindByString(n);
-                time.FindByMask = db.GetTimeFindByMask();
-                time.UpdateByKey = db.GetTimeUpdateByKey(n);
-                time.UpdateByMask = db.GetTimeUpdateByMask();
-                time.DeleteByKey = db.GetTimeDeleteByKey(n);
-                time.DeleteByMask = db.GetTimeDeleteByMask();
-                time.DeleteGroup = db.GetTimeDeleteGroup(n);
-              //  time.Optimize1 = db.GetTimeOptimize1(n);
-              //  time.Optimize2 = db.GetTimeOptimize2();
+                time = db.GetTime(n, i);
 
                 coll.Add(time);
             }

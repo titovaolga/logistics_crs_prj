@@ -63,7 +63,7 @@ namespace LogisticDB
                 MessageBox.Show("Input payload > 0!", "", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            if ((DateTime)DateCalender.SelectedDate == null)
+            if (DateCalender.SelectedDate == null)
             {
                 MessageBox.Show("Select date!", "", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
