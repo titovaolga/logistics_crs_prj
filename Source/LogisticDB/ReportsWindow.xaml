@@ -5,10 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LogisticDB"
         mc:Ignorable="d"
-        Title="Reports" Height="600" Width="800">
+        Title="Reports" Height="480" Width="800">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -32,7 +32,7 @@
                 <Calendar Name="ToCalendar" Grid.Row="1" Grid.Column="1" />
             </Grid>
             <GroupBox Grid.Column="1" Margin="4" Header="Report Data:">
-                <DataGrid Name="ReportDataGrid"/>
+                <DataGrid Name="ReportDataGrid" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"/>
             </GroupBox>
         </Grid>
         <Grid Grid.Row="1">
@@ -53,16 +53,6 @@
             <Button Name="FinancialReportButton" Click="FinancialReportButton_Click" Grid.Column="4" Content="Financial&#x0a;   report" Margin="6" Height="40" Width="80"/>
             <Button Name="CheckTimeButton" Click="CheckTimeButton_Click" Grid.Column="5" Content="Check time" Margin="6" Height="40" Width="80"/>
             <Button Name="CloseButton" Click="CloseButton_Click"  Grid.Column="7" Content="Close" Margin="6" Height="30" Width="80"/>
-        </Grid>
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <Button Name="StayCoefAllButton" Click="StayCoefAllButton_Click" Grid.Column="0" Content="Stay coef&#x0a;   for all" Margin="6" Height="40" Width="80"/>
-            <Button Name="UselessRunAllCoefButton" Click="UselessRunAllCoefButton_Click" Grid.Column="1" Content="Useless run&#x0a; for all coef" Margin="6" Height="40" Width="80"/>
         </Grid>
     </Grid>
 </Window>

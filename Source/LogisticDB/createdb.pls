@@ -45,8 +45,8 @@ END $$;
 CREATE TABLE IF NOT EXISTS cargotypes
 (
 	id serial PRIMARY KEY,
-	name text NOT NULL UNIQUE
-	--price_per_km_ton double precision NOT NULL CHECK (price_per_km_ton > 0) 
+	name text NOT NULL UNIQUE,
+	price_per_km_ton double precision NOT NULL CHECK (price_per_km_ton > 0) 
 );
 
 CREATE INDEX ON cargotypes (id);
@@ -67,14 +67,14 @@ CREATE TABLE IF NOT EXISTS carmodels
 );
 
 CREATE INDEX ON carmodels (id);
---CREATE INDEX ON carmodels (name);
---CREATE INDEX ON carmodels (cargotype_id);
---CREATE INDEX ON carmodels (payload);
---CREATE INDEX ON carmodels (price_buy);
---CREATE INDEX ON carmodels (price_sell);
---CREATE INDEX ON carmodels (price_empty_per_km);
---CREATE INDEX ON carmodels (price_full_per_km);
---CREATE INDEX ON carmodels (price_stand_per_day);
+CREATE INDEX ON carmodels (name);
+CREATE INDEX ON carmodels (cargotype_id);
+CREATE INDEX ON carmodels (payload);
+CREATE INDEX ON carmodels (price_buy);
+CREATE INDEX ON carmodels (price_sell);
+CREATE INDEX ON carmodels (price_empty_per_km);
+CREATE INDEX ON carmodels (price_full_per_km);
+CREATE INDEX ON carmodels (price_stand_per_day);
 
 DO $$
 BEGIN
@@ -286,25 +286,6 @@ SELECT c.id, c.registration_number, m.id as carmodel_id, m.name as carmodel_name
        INNER JOIN transactions AS t1 ON c.id = t1.car_id AND t1.city_from = get_store_id()
        LEFT JOIN transactions AS t2 ON c.id = t2.car_id AND t2.city_to = get_store_id();
 
-/*CREATE OR REPLACE VIEW transactions_view AS
-SELECT t.id, t.car_id, 
-       t.city_from, cf.name AS city_from_name,
-       t.city_to, ct.name AS city_to_name,
-       t.distance, t.date_from, t.date_to, 
-       CASE
-           WHEN weight > 0 THEN cv.price_full_per_km * distance
-           ELSE cv.price_empty_per_km * distance
-       END  AS expense,
-       t.distance * weight * crg.price_per_km_ton AS reward
-       FROM (SELECT *, get_distance(city_from,city_to) AS distance FROM transactions) AS t 
-       INNER JOIN cars_view AS cv ON t.car_id = cv.id  
-       INNER JOIN cargotypes AS crg ON cv.cargotype_id = crg.id
-       INNER JOIN cities AS cf ON t.city_from = cf.id
-       INNER JOIN cities AS ct ON t.city_to = ct.id
-       WHERE t.city_from != get_store_id() AND t.city_to != get_store_id()
-       ORDER BY t.date_from;
-	*/
-
 ---------------------------------- FUNCTIONS -------------------------------------------------------------
 
 DO $$
@@ -384,7 +365,7 @@ BEGIN
     RETURN QUERY
     WITH tmp AS (SELECT cv.id, get_car_city_before(cv.id, _date) as city_before, get_car_city_after(cv.id, _date + get_distance_in_days(_city_id_from, _city_id_to)) as city_after
     FROM cars_view AS cv
-    WHERE cv.cargotype_id = _cargotype_id AND cv.payload >= _weight AND (cv.date_sell IS NULL OR cv.date_sell > _date)
+    WHERE cv.cargotype_id = _cargotype_id AND cv.payload >= _weight AND (cv.date_sell IS NULL OR cv.date_sell > _date + get_distance_in_days(_city_id_from, _city_id_to))
         AND 
         NOT EXISTS (SELECT 1 FROM transactions AS t WHERE t.car_id = cv.id AND t.date_from <= _date AND _date < t.date_to)
     ) 
@@ -403,7 +384,7 @@ AS $$
 DECLARE
     r_price record;
 BEGIN
-    SELECT price_empty_per_km, price_full_per_km INTO r_price FROM cars_view WHERE id = _car_id;	
+    SELECT cv.price_empty_per_km, cv.price_full_per_km, ct.price_per_km_ton INTO r_price FROM cars_view AS cv INNER JOIN cargotypes AS ct ON cv.cargotype_id = ct.id WHERE cv.id = _car_id; 
     RETURN (get_distance(_city_id_from, _city_id_to) * r_price.price_full_per_km * _weight + 
            (get_distance((get_car_city_before(_car_id, _date)).city_id, _city_id_from) + 
            get_distance(_city_id_to, COALESCE((get_car_city_after(_car_id, _date + get_distance_in_days(_city_id_from, _city_id_to))).city_id, _city_id_to))) * r_price.price_empty_per_km);
@@ -417,8 +398,8 @@ AS $$
 DECLARE
     r_price record;
 BEGIN
-    SELECT price_empty_per_km, price_full_per_km INTO r_price FROM cars_view WHERE id = _car_id;
-
+    SELECT cv.price_empty_per_km, cv.price_full_per_km, ct.price_per_km_ton INTO r_price FROM cars_view AS cv INNER JOIN cargotypes AS ct ON cv.cargotype_id = ct.id WHERE cv.id = _car_id; 
+    
 	IF (get_car_city_before(_car_id, _date)).city_id != _city_id_from
 	THEN
 		INSERT INTO transactions(car_id, city_from, city_to, date_from, date_to, reward, expense) 
@@ -430,8 +411,9 @@ BEGIN
 	INSERT INTO transactions(car_id, weight, city_from, city_to, date_from, date_to, reward, expense) 
 	VALUES (_car_id, _weight, _city_id_from, _city_id_to, 
 		_date, 
-		_date + get_distance_in_days(_city_id_from, _city_id_to),
-		get_distance(_city_id_from, _city_id_to) * r_price.price_full_per_km * _weight, 0);
+		_date + get_distance_in_days(_city_id_from, _city_id_to), 
+		get_distance(_city_id_from, _city_id_to) * r_price.price_per_km_ton * _weight, 
+		get_distance(_city_id_from, _city_id_to) * r_price.price_full_per_km);
 	
 	IF (get_car_city_after(_car_id, _date + get_distance_in_days(_city_id_from, _city_id_to))).city_id IS NOT NULL AND (get_car_city_after(_car_id, _date + get_distance_in_days(_city_id_from, _city_id_to))).city_id !=  _city_id_to
 	THEN
@@ -462,71 +444,80 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION stay_coef_report( IN _date_from date,  IN _date_to date) 
-RETURNS TABLE (car_id integer, coef real) 
+RETURNS TABLE (registration_number text,
+               carmodel_name text,
+               cargotype_name text,
+               payload real,
+               coef real)
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT id AS car_id, car_stay_coef(id, _date_from, _date_to) as coef FROM cars;
+    WITH rep AS
+    (
+        SELECT cv.registration_number, cv.carmodel_name, cv.cargotype_name, cv.payload,
+               car_stay_coef(id, _date_from, _date_to) AS coef
+        FROM cars_view AS cv
+    )
+    (SELECT * FROM rep) UNION ALL
+    (SELECT 'Total' AS registration_number, null AS carmodel_name,
+                        null AS cargotype_name, null AS payload, AVG(r.coef)::real AS coef FROM rep AS r);
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION stay_coef_for_all_report( IN _date_from date,  IN _date_to date) 
-RETURNS real 
-AS $$
-BEGIN
-	RETURN AVG(coef) as coef FROM stay_coef_report(_date_from, _date_to);
-END
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION coef_useless_run_for_each_car() 
-RETURNS TABLE (car_id integer, coef real)
-AS $$
-BEGIN	
-	DROP TABLE IF EXISTS tmp;
-	CREATE TEMP TABLE tmp AS
-		SELECT t.car_id, 
-			   get_distance(city_from, city_to) AS dist,
-			   weight
-		FROM transactions as t
-		WHERE date_part('year', date_from) = date_part('year', CURRENT_DATE);
-
-	DROP TABLE IF EXISTS way_full;
-	CREATE TEMP TABLE way_full AS
-		SELECT tmp.car_id, sum(dist) as dist_full FROM tmp
-		WHERE weight > 0
-		GROUP BY tmp.car_id;
-
-	DROP TABLE IF EXISTS way_empty;
-	CREATE TEMP TABLE way_empty AS
-		SELECT tmp.car_id, sum(dist) as dist_empty FROM tmp
-		WHERE weight = 0
-		GROUP BY tmp.car_id;
-	
-	RETURN QUERY	
-	SELECT way_empty.car_id AS car_id, CASE WHEN dist_full = 0 THEN (1000::real) WHEN dist_full IS NULL THEN (0::real) ELSE (dist_empty::real) * (1::real) / (dist_full::real) END AS coef FROM way_empty FULL OUTER JOIN way_full ON way_empty.car_id = way_full.car_id;
-END;
-$$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION coef_useless_run_for_all() 
+CREATE OR REPLACE FUNCTION car_useless_run_coef(IN _car_id integer, IN _date_from date,  IN _date_to date) 
 RETURNS real
 AS $$
 DECLARE 
-	r record;
+     useless_run integer;
+     usefull_run integer;
+     cv record;
 BEGIN
-	DROP TABLE IF EXISTS tmp;
-	CREATE TEMP TABLE tmp AS
-		SELECT get_distance(city_from, city_to) AS dist,
-			   weight
-		FROM transactions as t
-		WHERE date_part('year', date_from) = date_part('year', CURRENT_DATE);
-
-	SELECT SUM(dist) INTO r.full FROM tmp WHERE weight > 0;
-
-	SELECT SUM(dist) INTO r.empty FROM tmp	WHERE weight = 0;
-	
-	RETURN ((r.empty)::real) * 1.0 / r.full;
+    SELECT date_buy, date_sell INTO cv FROM cars_view WHERE id = _car_id; 
+    SELECT SUM(get_distance(city_from, city_to)) INTO useless_run FROM transactions
+    WHERE car_id = _car_id AND date_from < _date_to AND date_to >= _date_from AND weight = 0;
+ 
+    SELECT SUM(get_distance(city_from, city_to)) INTO usefull_run FROM transactions
+    WHERE car_id = _car_id AND date_from < _date_to AND date_to >= _date_from AND weight > 0;
+    RAISE NOTICE 'useless_run % usefull_run %', useless_run, usefull_run;
+    IF (useless_run = 0 AND usefull_run = 0) THEN
+        RETURN 0::real;
+    END IF;
+    RETURN (useless_run::real) / (useless_run + usefull_run);
 END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION useless_run_report( IN _date_from date,  IN _date_to date) 
+RETURNS TABLE (registration_number text,
+               carmodel_name text,
+               cargotype_name text,
+               payload real,
+               coef real)
+AS $$
+DECLARE 
+     useless_run integer;
+     usefull_run integer;
+     total_coef real;
+BEGIN
+    SELECT SUM(get_distance(city_from, city_to)) INTO useless_run FROM transactions
+    WHERE date_from < _date_to AND date_to >= _date_from AND weight = 0;
+
+    SELECT SUM(get_distance(city_from, city_to)) INTO usefull_run FROM transactions
+    WHERE  date_from < _date_to AND date_to >= _date_from AND weight > 0;
+    IF (useless_run = 0 AND usefull_run = 0) THEN
+        total_coef := 0::real;
+    ELSE
+        total_coef := (useless_run::real) / (useless_run + usefull_run);
+    END IF; 
+
+    RETURN QUERY
+    (
+        SELECT cv.registration_number, cv.carmodel_name, cv.cargotype_name, cv.payload,
+               car_useless_run_coef(id, _date_from, _date_to) AS coef
+        FROM cars_view AS cv
+    ) UNION ALL
+    (SELECT 'Total' AS registration_number, null AS carmodel_name,
+                        null AS cargotype_name, null AS payload, total_coef AS coef);
+END
 $$ LANGUAGE plpgsql;
 
 
@@ -536,7 +527,7 @@ AS $$
 BEGIN
 	DROP TABLE IF EXISTS tmp;
 	CREATE TEMP TABLE tmp AS
-	SELECT t.car_id, t.weight, m.cargotype_id FROM transactions AS t INNER JOIN carmodels AS m ON t.car_id = m.id;
+	SELECT t.car_id, t.weight, m.cargotype_id FROM transactions AS t INNER JOIN cars AS c ON c.id = t.car_id INNER JOIN carmodels AS m ON c.carmodel_id = m.id;
 
 	RETURN QUERY
 	SELECT tmp.cargotype_id, sum(weight) AS sum_weight FROM tmp GROUP BY tmp.cargotype_id ORDER BY sum_weight DESC;
@@ -611,12 +602,12 @@ INSERT INTO roads(city_from, city_to, distance) VALUES
 (get_city_id('Sochi'), get_city_id('Vladivostok'), 7100)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO cargotypes(name) 
+INSERT INTO cargotypes(name, price_per_km_ton) 
 VALUES
-('sand'),
-('boxes'),
-('liquid'),
-('gas')
+('sand',20),
+('boxes',30),
+('liquid',50),
+('gas',80)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO carmodels

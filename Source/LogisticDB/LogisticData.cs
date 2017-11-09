@@ -111,7 +111,7 @@ namespace LogisticDB
 
     public class PopularCargoes
     {
-        public int cargotype_id { get; set; } 
+       // public int cargotype_id { get; set; } 
         public string cargotype_name { get; set; }
         public float sum_weight { get; set; }
     }
@@ -129,13 +129,13 @@ namespace LogisticDB
         public string source { get; set; }
         public double expense { get; set; }
         public double reward { get; set; }
-        public bool isUnprofitable { get { return reward > 0 && expense >= reward; } }
+   //     public bool isUnprofitable { get { return reward > 0 && expense >= reward; } }
         public bool isProfitable { get { return reward > 0 && expense < reward; } }
         public DateTime date_from { get; set; }
         public DateTime? date_to { get; set; }
     }
 
-    public class Time
+    public class PerfomanceTime
     {
         public int RowsInTable { get; set; }
         public double AddOne { get; set; }
@@ -148,8 +148,8 @@ namespace LogisticDB
         public double DeleteByKey { get; set; }
         public double DeleteByString { get; set; }
         public double DeleteGroup { get; set; }
-        public double Optimize1 { get; set; }
-        public double Optimize2 { get; set; }
+        public double Compress1 { get; set; }
+        public double Compress2 { get; set; }
     }
         
     public class LogisticData
@@ -226,45 +226,21 @@ namespace LogisticDB
             }
         }
 
-        public IEnumerable<TransactionView> GetCarTransactions(Car car)
-        {
-            using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
-            {
-                return conn.Query<TransactionView>(@"SELECT * FROM  transactions_view WHERE car_id = @id", car);
-            }
-        }
-
         public IEnumerable<CarCoef> GetStayCoefReport(DateTime from, DateTime to)
         {
             using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
             {
-                return conn.Query<CarCoef>(@"SELECT * FROM stay_coef_report(@from::date, @to::date) AS r INNER JOIN cars_view AS cv ON cv.id = r.car_id",
-                      new { from = from, to = to });
+                return conn.Query<CarCoef>(@"SELECT * FROM stay_coef_report(@from::date, @to::date) ",
+                                           new { from = from, to = to });
             }
         }
 
-        public IEnumerable<CarCoef> GetUselessRunCoefReport()
+        public IEnumerable<CarCoef> GetUselessRunCoefReport(DateTime from, DateTime to)
         {
             using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
             {
-                return conn.Query<CarCoef>(@"SELECT * FROM coef_useless_run_for_each_car() AS r INNER JOIN cars_view AS cv ON cv.id = r.car_id");
-            }
-        }
-
-        public float GetStayCoefForAllReport(DateTime from, DateTime to)
-        {
-            using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
-            { 
-                return conn.ExecuteScalar<float>(@"SELECT * FROM stay_coef_for_all_report(@from::date, @to::date)",
-                    new { from = from, to = to });
-            }
-        }
-
-        public IEnumerable<CarCoef> GetUselessRunCoefForAllReport()
-        {
-            using (NpgsqlConnection conn = new NpgsqlConnection(ConnectStr))
-            {
-                return conn.Query<CarCoef>(@"SELECT * FROM coef_useless_run_for_all()");
+                return conn.Query<CarCoef>(@"SELECT * FROM useless_run_report(@from::date, @to::date)",
+                                           new { from = from, to = to });
             }
         }
 
@@ -292,248 +268,301 @@ namespace LogisticDB
             }
         }
 
-        public void MakeTable(int n, int num)
+        public void MakeExampleTable(int n)
         {
             int i;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
-            var com = String.Format("CREATE TABLE IF NOT EXISTS test" + num + "(id serial NOT NULL PRIMARY KEY, name text NOT NULL, type_id integer NOT NULL, payload real NOT NULL, price_buy double precision NOT NULL, price_sell double precision NOT NULL)");
+            var com = String.Format(@"CREATE TABLE IF NOT EXISTS example{0} 
+                (id serial NOT NULL PRIMARY KEY, name text NOT NULL, type_id
+                integer NOT NULL, payload real NOT NULL, price_buy double
+                precision NOT NULL, price_sell double precision NOT NULL); ALTER TABLE example{0} SET (autovacuum_enabled = false, toast.autovacuum_enabled = false);", n);
             NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
             cmd.ExecuteNonQuery();
+            com = String.Format(@"INSERT INTO example{0} (name, type_id, payload, price_buy, price_sell) VALUES ", n);
             for (i = 0; i < n; i++)
-            {
-                com = String.Format(@"INSERT INTO test" + num + "(name, type_id, payload, price_buy, price_sell) VALUES ('tmp', 20, 10, 3.5e6, 2.5e5)");
-                cmd = new NpgsqlCommand(com, conn);
-                cmd.ExecuteNonQuery();
-            }
+                com += String.Format(" ('tmp{0}', 20, 10, 3.5e6, 2.5e5){1}", i, i == n - 1 ? "" : ",");
+            cmd = new NpgsqlCommand(com, conn);
+            cmd.ExecuteNonQuery();
             conn.Close();
         }
 
-        public Time GetTime(int n, int tableNum)
+        public void CopyExampleToTestTable(int n)
         {
-            Time time = new Time();
+            int i;
+            NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
+            conn.Open();
+            var com = String.Format(@"DROP TABLE IF EXISTS test{0};
+                CREATE TABLE test{0} AS SELECT * FROM example{0}; 
+                 ALTER TABLE test{0}
+                 ADD CONSTRAINT test{0}_id_pkey PRIMARY KEY (id);
+           ", n);
+            NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            cmd.ExecuteNonQuery();
+            var max = conn.ExecuteScalar<int>("SELECT MAX(id) FROM test" + n.ToString());
+            conn.Execute(string.Format(@"CREATE SEQUENCE IF NOT EXISTS test{0}_id_seq START WITH {1};
+                                         SELECT setval('test{0}_id_seq',{1}, true); 
+                                         ALTER TABLE test{0} ALTER COLUMN id SET DEFAULT nextval('test{0}_id_seq');", n, max));
+
+            conn.Close(); 
+        }
+
+
+        public void DelTestTable(int n)
+        {
+            NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
+            conn.Open();
+            var com = String.Format(@"DROP TABLE test{0}", n); 
+            NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            cmd.ExecuteNonQuery();
+            conn.Close();
+        }
+
+        public void DelExampleTable(int n)
+        {
+            NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
+            conn.Open();
+            var com = String.Format(@"DROP TABLE example{0}", n);
+            NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            cmd.ExecuteNonQuery();
+            conn.Close();
+        }
+
+
+        public PerfomanceTime GetPerfomanceTime(int n)
+        {
+            PerfomanceTime time = new PerfomanceTime();
             int i = 0;
 
             time.RowsInTable = n;
-            time.AddOne = 0;
-            time.AddGroup = 0;
-            time.FindByKey = 0;
-            time.FindByString = 0;
-            time.FindByMask = 0;
-            time.UpdateByKey = 0;
-            time.UpdateByString = 0;
-            time.DeleteByKey = 0;
-            time.DeleteByString = 0;
-            time.DeleteGroup = 0;
+            //var conn = new NpgsqlConnection(ConnectStr);
+            //var t = DateTime.Now; 
+            //conn.ExecuteScalar<int>("SELECT 1");
+            //var delta = DateTime.Now - t;
+            //conn.Close();
 
-            MakeTable(n, tableNum);
+            MakeExampleTable(n);
 
-            for (i = 0; i < 100; i++)
+            int nTests = 1;
+            for (i = 0; i < nTests; i++)
             {
-                time.AddOne += GetTimeAddOne(tableNum);
-                time.DeleteByKey += GetTimeDeleteByKey(i, tableNum);
-                time.AddGroup += GetTimeAddGroup(tableNum);
-                time.DeleteByString += GetTimeDeleteByString(tableNum);
-                time.DeleteGroup += GetTimeDeleteGroup(tableNum);
-                time.FindByKey += GetTimeFindByKey(i, tableNum);
-                time.FindByString += GetTimeFindByString(tableNum);
-                time.FindByMask += GetTimeFindByMask(tableNum);
-                time.UpdateByKey += GetTimeUpdateByKey(i, tableNum);
-                time.UpdateByString += GetTimeUpdateByString(tableNum);
+                CopyExampleToTestTable(n);
+                int j = i + 1;
+                int k = i + 2;
+                int m = i + 3;
+                time.AddOne += GetTimeAddOne(n);
+                time.FindByKey += GetTimeFindByKey(j, n);
+                time.UpdateByKey += GetTimeUpdateByKey(k, n);
+                time.DeleteByKey += GetTimeDeleteByKey(m, n);
+                time.AddGroup += GetTimeAddGroup(n);
+                time.FindByString += GetTimeFindByString(n);
+                time.FindByMask += GetTimeFindByMask(n);
+                time.UpdateByString += GetTimeUpdateByString(n);
+                time.DeleteByString += GetTimeDeleteByString(n);
+                time.DeleteGroup += GetTimeDeleteGroup(n);
+                time.Compress1 += GetTimeVacuum1(n);
+                time.Compress2 += GetTimeVacuum2(n);
+                DelTestTable(n);
             }
+            DelExampleTable(n);
 
-            time.AddOne /= 100;
-            time.AddGroup /= 100;
-            time.FindByKey /= 100;
-            time.FindByString /= 100;
-            time.FindByMask /= 100;
-            time.UpdateByKey /= 100;
-            time.UpdateByString /= 100;
-            time.DeleteByKey /= 100;
-            time.DeleteByString /= 100;
-            time.DeleteGroup /= 100;
+            time.AddOne /= nTests;
+            time.AddGroup /= nTests;
+            time.FindByKey /= nTests;
+            time.FindByString /= nTests;
+            time.FindByMask /= nTests;
+            time.UpdateByKey /= nTests;
+            time.UpdateByString /= nTests;
+            time.DeleteByKey /= nTests;
+            time.DeleteByString /= nTests;
+            time.DeleteGroup /= nTests;
 
             return time;
         }
 
         public double GetTimeAddOne(int num)
         {
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
             var com = String.Format(@"INSERT INTO test" + num + "(name, type_id, payload, price_buy, price_sell) VALUES ('new', 20, 10, 3.5e6, 2.5e5)");
             NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            var startTime = DateTime.Now;
             cmd.ExecuteNonQuery();
-            conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+            conn.Close();
             return dtime;
         }
 
         public double GetTimeAddGroup(int num)
         {
             int i = 0;
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             string com;
             NpgsqlCommand cmd;
             conn.Open();
+
+            var startTime = DateTime.Now;
             for (i = 0; i < 101; i++)
             {
                 com = String.Format(@"INSERT INTO test" + num + "(name, type_id, payload, price_buy, price_sell) VALUES ('new" + i + "', 20, 10, 3.5e6, 2.5e5)");
                 cmd = new NpgsqlCommand(com, conn);
                 cmd.ExecuteNonQuery();
             }
-            conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+
+            conn.Close();
             return dtime;
         }
 
         public double GetTimeFindByKey(int i, int num)
         {
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
             var com = String.Format("SELECT * FROM test" + num + " WHERE id = " + i);
             NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+
+            var startTime = DateTime.Now;
             NpgsqlDataReader dr = cmd.ExecuteReader();
             var carmodels = new List<CarModel>();
             while (dr.Read())
             {
                 carmodels.Add(new CarModel { id = dr.GetInt32(0), name = dr.GetString(1), cargotype_id = dr.GetInt32(2), payload = dr.GetFloat(3), price_buy = dr.GetDouble(4), price_sell = dr.GetDouble(5) });
             }
-            conn.Close();
+
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+            conn.Close();
             return dtime;
         }
 
         public double GetTimeFindByString(int num)
         {
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
             var com = String.Format("SELECT * FROM test" + num + " WHERE name = 'new'");
             NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            var startTime = DateTime.Now;
             NpgsqlDataReader dr = cmd.ExecuteReader();
             var carmodels = new List<CarModel>();
             while (dr.Read())
             {
                 carmodels.Add(new CarModel { id = dr.GetInt32(0), name = dr.GetString(1), cargotype_id = dr.GetInt32(2), payload = dr.GetFloat(3), price_buy = dr.GetDouble(4), price_sell = dr.GetDouble(5) });
             }
-            conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+            conn.Close();
             return dtime;
         }
 
         public double GetTimeFindByMask(int num)
         {
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
             var com = String.Format("SELECT * FROM test" + num + " WHERE name LIKE 'new5%'");
             NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            var startTime = DateTime.Now;
             NpgsqlDataReader dr = cmd.ExecuteReader();
             var carmodels = new List<CarModel>();
             while (dr.Read())
             {
                 carmodels.Add(new CarModel { id = dr.GetInt32(0), name = dr.GetString(1), cargotype_id = dr.GetInt32(2), payload = dr.GetFloat(3), price_buy = dr.GetDouble(4), price_sell = dr.GetDouble(5) });
             }
-            conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+            conn.Close();
             return dtime;
         }
 
         public double GetTimeUpdateByKey(int i, int num)
         {
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
             var com = String.Format(@"UPDATE test" + num + " SET name = 'test', type_id = 2, payload = 5, price_buy = 1e6, price_sell = 2e6 WHERE id = " + i);
             NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            var startTime = DateTime.Now;
             NpgsqlDataReader dr = cmd.ExecuteReader();
-            conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+            conn.Close();
             return dtime;
         }
 
         public double GetTimeUpdateByString(int num)
         {
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
-            var com = String.Format(@"UPDATE test" + num + " SET name = 'test', type_id = 2, payload = 5, price_buy = 1e6, price_sell = 2e6 WHERE name LIKE 'tmp1%'");
+            var com = String.Format(@"UPDATE test" + num + " SET name = 'test', type_id = 2, payload = 5, price_buy = 1e6, price_sell = 2e6 WHERE name = 'newnTests'");
             NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            var startTime = DateTime.Now;
             NpgsqlDataReader dr = cmd.ExecuteReader();
-            conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+            conn.Close();
             return dtime;
         }
 
         public double GetTimeDeleteByKey(int i, int num)
         {
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
             var com = String.Format("DELETE FROM test" + num + " WHERE id = " + i);
             NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            var startTime = DateTime.Now;
             NpgsqlDataReader dr = cmd.ExecuteReader();
-            conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+            conn.Close();
             return dtime;
         }
 
         public double GetTimeDeleteByString(int num)
         {
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
-            var com = String.Format("DELETE FROM test" + num + " WHERE name = 'new100'");
+            var com = String.Format("DELETE FROM test" + num + " WHERE name = 'newnTests'");
             NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
+            var startTime = DateTime.Now;
             NpgsqlDataReader dr = cmd.ExecuteReader();
-            conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+            conn.Close();
             return dtime;
         }
 
         public double GetTimeDeleteGroup(int num)
         {
-            var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
+            var startTime = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
                 var com = String.Format("DELETE FROM test" + num + " WHERE name LIKE 'new" + i + "'");
                 NpgsqlCommand cmd = new NpgsqlCommand(com, conn);
                 NpgsqlDataReader dr = cmd.ExecuteReader();
             }
-            conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
+            conn.Close();
             return dtime;
         }
 
-        public double GetTimeOptimize1(int n)
+        public double GetTimeVacuum1(int num)
         {
-            int tmp = n - 200;
-            var startTime = DateTime.Now;
+            int tmp = num - 200;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
-            var com1 = String.Format("DELETE FROM carmodels WHERE id >= " + tmp);
-            var com2 = String.Format("VACUUM TABLE carmodels");
+            var com1 = String.Format("DELETE FROM test" + num + " WHERE id >= " + tmp);
+            var com2 = String.Format("VACUUM test" + num + "");
             NpgsqlCommand cmd = new NpgsqlCommand(com1, conn);
-            NpgsqlDataReader dr = cmd.ExecuteReader();
+            cmd.ExecuteNonQuery();
+            var startTime = DateTime.Now;
             cmd = new NpgsqlCommand(com2, conn);
-            dr = cmd.ExecuteReader();
+            cmd.ExecuteNonQuery();
             conn.Close();
             double dtime = (DateTime.Now - startTime).TotalSeconds;
             return dtime;
         }
 
-        public double GetTimeOptimize2()
+        public double GetTimeVacuum2(int num)
         {
+            int tmp = num - 200;
             var startTime = DateTime.Now;
             NpgsqlConnection conn = new NpgsqlConnection(ConnectStr);
             conn.Open();
-            var com1 = String.Format("DELETE FROM carmodels WHERE id >= 200");
-            var com2 = String.Format("VACUUM TABLE carmodels");
+            var com1 = String.Format("DELETE FROM  test" + num + " WHERE id <= " + tmp);
+            var com2 = String.Format("VACUUM test" + num);
             NpgsqlCommand cmd = new NpgsqlCommand(com1, conn);
             NpgsqlDataReader dr = cmd.ExecuteReader();
             cmd = new NpgsqlCommand(com2, conn);

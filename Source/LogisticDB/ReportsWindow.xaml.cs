@@ -77,41 +77,28 @@ namespace LogisticDB
 
         private void UselessRunCoefButton_Click(object sender, RoutedEventArgs e)
         {
-            ReportDataGrid.ItemsSource = db.GetUselessRunCoefReport();
+            if (!CheckInputDates())
+                return;
+
+            ReportDataGrid.ItemsSource = db.GetUselessRunCoefReport(FromCalendar.SelectedDate.Value, ToCalendar.SelectedDate.Value);
         }
 
         private void CheckTimeButton_Click(object sender, RoutedEventArgs e)
         {
             CheckTimeButton.IsEnabled = false;
 
-            var coll = new List<Time>();
-
-            int n, start, i;
-            for (i = 0, n = 1000, start = 0; n <= 10000; start = n, n *= 10, i++)
+            var coll = new List<PerfomanceTime>();
+            
+            int n, i;
+            for (i = 0, n = 1000; n <= 100000 / 10; n *= 10, i++)
             {
-                var time = new Time();
-                // name = "testTime" + i;
-
-                time = db.GetTime(n, i);
+                var time = new PerfomanceTime();
+                
+                time = db.GetPerfomanceTime(n);
 
                 coll.Add(time);
             }
-
             ReportDataGrid.ItemsSource = coll;
-        }
-
-        private void StayCoefAllButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (!CheckInputDates())
-                return;
-
-            float coef = db.GetStayCoefForAllReport(FromCalendar.SelectedDate.Value, ToCalendar.SelectedDate.Value);
-            MessageBox.Show("Stay coefficient for all: " + coef, "", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void UselessRunAllCoefButton_Click(object sender, RoutedEventArgs e)
-        {
-            ReportDataGrid.ItemsSource = db.GetUselessRunCoefForAllReport();
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
